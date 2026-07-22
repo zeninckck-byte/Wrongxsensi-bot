@@ -48,15 +48,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Username: @{username}"
         )
 
-    elif query.data == "profile":
-        user = query.from_user
-        username = user.username if user.username else "No username"
-
-        await query.edit_message_text(
-            f"👤 Profile\n\n"
-            f"Name: {user.first_name}\n"
-            f"Username: @{username}"
-        )
 
 async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -87,11 +78,46 @@ async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
+async def activate_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if update.effective_user.id not in waiting_for_key:
+
+        return
+
+    waiting_for_key.remove(update.effective_user.id)
+
+    key = update.message.text.strip()
+
+    data = get_key(key)
+
+    if data is None:
+
+        await update.message.reply_text("❌ Invalid key.")
+
+        return
+
+    if data[2] == 1:
+
+        await update.message.reply_text("❌ This key has already been used.")
+
+        return
+
+    mark_used(key)
+
+    await update.message.reply_text(
+
+        f"✅ Key Activated Successfully!\n\n"
+
+        f"📅 Expires: {data[1]}"
+
+    )
+
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("genkey", genkey))
 app.add_handler(CallbackQueryHandler(button))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, activate_key))
 
 print("Bot Started...")
 app.run_polling()
