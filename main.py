@@ -8,7 +8,7 @@ from telegram.ext import (
     filters,
 )
 from keys import generate_key
-from database import save_key, get_key, mark_used
+from database import save_key, get_key, mark_used reset_key
 
 TOKEN = "8873787131:AAHsJc_rvxPmwwQmcRuZVtrpw3z_JV63sJQ"
 ADMIN_ID = 8226572649
@@ -114,8 +114,28 @@ async def activate_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     )
 
-app = ApplicationBuilder().token(TOKEN).build()
+async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("❌ You are not the admin.")
+        return
+
+    if len(context.args) != 1:
+        await update.message.reply_text(
+            "Usage:\n/reset KEY"
+        )
+        return
+
+    key = context.args[0]
+
+    reset_key(key)
+
+    await update.message.reply_text(
+        "✅ Key reset successfully."
+    )
+
+app = ApplicationBuilder().token(TOKEN).build()
+app.add_handler(CommandHandler("reset", reset))
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("genkey", genkey))
 app.add_handler(CallbackQueryHandler(button))
