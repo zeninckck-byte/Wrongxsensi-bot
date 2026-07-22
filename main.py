@@ -1,14 +1,44 @@
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+)
 
 TOKEN = "8873787131:AAHMYe3fXTKvvNmW1mWEZ96YiOZ-Qwc4D8o"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Hello! My bot is working.")
+    keyboard = [
+        [InlineKeyboardButton("🔑 Activate Key", callback_data="activate")],
+        [InlineKeyboardButton("👤 Profile", callback_data="profile")],
+        [InlineKeyboardButton("📢 Join Channel", url="https://t.me/+UCI8v9aNQyJkNDY1")]
+    ]
+
+    await update.message.reply_text(
+        "🔥 Welcome to WRONGxSENSI BOT 🔥\n\nChoose an option:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "activate":
+        await query.edit_message_text("🔑 Send your activation key.")
+
+    elif query.data == "profile":
+        user = query.from_user
+        await query.edit_message_text(
+            f"👤 Profile\n\n"
+            f"Name: {user.first_name}\n"
+            f"Username: @{user.username}"
+        )
 
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CallbackQueryHandler(button))
 
-print("Bot is running...")
+print("Bot Started...")
 app.run_polling()
