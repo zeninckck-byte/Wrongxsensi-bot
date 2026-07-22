@@ -12,6 +12,8 @@ from database import save_key, get_key, mark_used
 TOKEN = "8873787131:AAHsJc_rvxPmwwQmcRuZVtrpw3z_JV63sJQ"
 ADMIN_ID = 8226572649
 
+waiting_for_key = set()
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🔑 Activate Key", callback_data="activate")],
@@ -29,9 +31,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     if query.data == "activate":
-        await query.edit_message_text(
-            "🔑 Send your activation key."
-        )
+    waiting_for_key.add(query.from_user.id)
+
+    await query.edit_message_text(
+        "🔑 Send your activation key."
+    )
 
     elif query.data == "profile":
         user = query.from_user
