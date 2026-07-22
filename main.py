@@ -5,6 +5,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
 )
+from keys import generate_key
 from database import save_key, get_key, mark_used
 
 TOKEN = "8873787131:AAHsJc_rvxPmwwQmcRuZVtrpw3z_JV63sJQ"
