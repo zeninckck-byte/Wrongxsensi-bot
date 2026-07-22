@@ -79,5 +79,3 @@ app.add_handler(CallbackQueryHandler(button))
 
 print("Bot Started...")
 app.run_polling()
-
-Can you add please
