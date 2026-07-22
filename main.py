@@ -7,8 +7,9 @@ from telegram.ext import (
 )
 from keys import generate_key
 
-TOKEN = "8873787131:AAHMYe3fXTKvvNmW1mWEZ96YiOZ-Qwc4D8o"
+TOKEN = "8873787131:AAHsJc_rvxPmwwQmcRuZVtrpw3z_JV63sJQ"
 ADMIN_ID = 8226572649
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -22,12 +23,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     if query.data == "activate":
-        await query.edit_message_text("🔑 Send your activation key.")
+        await query.edit_message_text(
+            "🔑 Send your activation key."
+        )
 
     elif query.data == "profile":
         user = query.from_user
@@ -39,16 +43,36 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Username: @{username}"
         )
 
+
 async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text("❌ You are not the admin.")
         return
 
-    key = generate_key()
+    if len(context.args) != 1:
+        await update.message.reply_text(
+            "Usage:\n/genkey 1\n/genkey 7\n/genkey 30"
+        )
+        return
+
+    try:
+        days = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Enter a valid number."
+        )
+        return
+
+    key, expiry = generate_key(days)
+
     await update.message.reply_text(
-        f"✅ New Key:\n\n`{key}`",
+        f"✅ New Key\n\n"
+        f"🔑 Key: `{key}`\n"
+        f"⏳ Validity: {days} day(s)\n"
+        f"📅 Expires: {expiry}",
         parse_mode="Markdown"
     )
+
 
 app = ApplicationBuilder().token(TOKEN).build()
 
