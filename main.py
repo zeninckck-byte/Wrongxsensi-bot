@@ -5,11 +5,10 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
 )
-from keys import generate_key
+from database import save_key, get_key, mark_used
 
 TOKEN = "8873787131:AAHsJc_rvxPmwwQmcRuZVtrpw3z_JV63sJQ"
 ADMIN_ID = 8226572649
-
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -22,7 +21,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🔥 Welcome to WRONGxSENSI BOT 🔥\n\nChoose an option:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
-
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -43,7 +41,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Username: @{username}"
         )
 
-
 async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text("❌ You are not the admin.")
@@ -58,12 +55,13 @@ async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         days = int(context.args[0])
     except ValueError:
-        await update.message.reply_text(
-            "❌ Enter a valid number."
-        )
+        await update.message.reply_text("❌ Enter a valid number.")
         return
 
     key, expiry = generate_key(days)
+
+    # Save key into database
+    save_key(key, expiry)
 
     await update.message.reply_text(
         f"✅ New Key\n\n"
@@ -73,7 +71,6 @@ async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
-
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
@@ -82,3 +79,5 @@ app.add_handler(CallbackQueryHandler(button))
 
 print("Bot Started...")
 app.run_polling()
+
+Can you add please
