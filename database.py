@@ -6,25 +6,33 @@ cursor = conn.cursor()
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS keys (
     key TEXT PRIMARY KEY,
+    expiry TEXT,
     used INTEGER DEFAULT 0
 )
 """)
 
 conn.commit()
 
-def save_key(key):
-    cursor.execute("INSERT INTO keys (key) VALUES (?)", (key,))
+
+def save_key(key, expiry):
+    cursor.execute(
+        "INSERT INTO keys (key, expiry) VALUES (?, ?)",
+        (key, expiry)
+    )
     conn.commit()
 
-def key_exists(key):
-    cursor.execute("SELECT * FROM keys WHERE key=?", (key,))
+
+def get_key(key):
+    cursor.execute(
+        "SELECT key, expiry, used FROM keys WHERE key=?",
+        (key,)
+    )
     return cursor.fetchone()
 
-def use_key(key):
-    cursor.execute("UPDATE keys SET used=1 WHERE key=?", (key,))
-    conn.commit()
 
-def is_used(key):
-    cursor.execute("SELECT used FROM keys WHERE key=?", (key,))
-    row = cursor.fetchone()
-    return row and row[0] == 1
+def mark_used(key):
+    cursor.execute(
+        "UPDATE keys SET used=1 WHERE key=?",
+        (key,)
+    )
+    conn.commit()
