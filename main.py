@@ -31,11 +31,21 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     if query.data == "activate":
-    waiting_for_key.add(query.from_user.id)
+        waiting_for_key.add(query.from_user.id)
 
-    await query.edit_message_text(
-        "🔑 Send your activation key."
-    )
+        await query.edit_message_text(
+            "🔑 Send your activation key."
+        )
+
+    elif query.data == "profile":
+        user = query.from_user
+        username = user.username if user.username else "No username"
+
+        await query.edit_message_text(
+            f"👤 Profile\n\n"
+            f"Name: {user.first_name}\n"
+            f"Username: @{username}"
+        )
 
     elif query.data == "profile":
         user = query.from_user
