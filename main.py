@@ -4,6 +4,7 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     ContextTypes,
+    filters,
 )
 from keys import generate_key
 from database import save_key, get_key, mark_used
@@ -42,28 +43,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Username: @{username}"
         )
 
+...
+
 async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("❌ You are not the admin.")
-        return
-
-    if len(context.args) != 1:
-        await update.message.reply_text(
-            "Usage:\n/genkey 1\n/genkey 7\n/genkey 30"
-        )
-        return
-
-    try:
-        days = int(context.args[0])
-    except ValueError:
-        await update.message.reply_text("❌ Enter a valid number.")
-        return
-
-    key, expiry = generate_key(days)
-
-    # Save key into database
-    save_key(key, expiry)
-
+    ...
     await update.message.reply_text(
         f"✅ New Key\n\n"
         f"🔑 Key: `{key}`\n"
@@ -71,6 +54,28 @@ async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📅 Expires: {expiry}",
         parse_mode="Markdown"
     )
+
+async def activate_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    key = update.message.text.strip()
+
+    data = get_key(key)
+
+    if data is None:
+        await update.message.reply_text("❌ Invalid key.")
+        return
+
+    if data[2] == 1:
+        await update.message.reply_text("❌ This key has already been used.")
+        return
+
+    mark_used(key)
+
+    await update.message.reply_text(
+        f"✅ Key Activated Successfully!\n\n"
+        f"📅 Expiry: {data[1]}"
+    )
+
+app = ApplicationBuilder().token(TOKEN).build()
 
 app = ApplicationBuilder().token(TOKEN).build()
 
