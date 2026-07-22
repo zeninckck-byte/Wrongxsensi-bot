@@ -5,8 +5,10 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
 )
+from keys import generate_key
 
-TOKEN = "8873787131:AAHMYe3fXTKvvNmW1mWEZ96YiOZ-Qwc4D8o"
+TOKEN = "YOUR_NEW_BOT_TOKEN"
+ADMIN_ID = 8226572649
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -29,15 +31,29 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "profile":
         user = query.from_user
+        username = user.username if user.username else "No username"
+
         await query.edit_message_text(
             f"👤 Profile\n\n"
             f"Name: {user.first_name}\n"
-            f"Username: @{user.username}"
+            f"Username: @{username}"
         )
+
+async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("❌ You are not the admin.")
+        return
+
+    key = generate_key()
+    await update.message.reply_text(
+        f"✅ New Key:\n\n`{key}`",
+        parse_mode="Markdown"
+    )
 
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("genkey", genkey))
 app.add_handler(CallbackQueryHandler(button))
 
 print("Bot Started...")
