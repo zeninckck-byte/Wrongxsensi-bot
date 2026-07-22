@@ -7,7 +7,7 @@ from telegram.ext import (
 )
 from keys import generate_key
 
-TOKEN = "YOUR_NEW_BOT_TOKEN"
+TOKEN = "8873787131:AAHMYe3fXTKvvNmW1mWEZ96YiOZ-Qwc4D8o"
 ADMIN_ID = 8226572649
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
