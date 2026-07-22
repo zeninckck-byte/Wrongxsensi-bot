@@ -78,21 +78,7 @@ async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
-async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("❌ You are not the admin.")
-        return
 
-    keyboard = [
-        [InlineKeyboardButton("🔑 Generate 1 Day", callback_data="gen_1")],
-        [InlineKeyboardButton("🔑 Generate 7 Days", callback_data="gen_7")],
-        [InlineKeyboardButton("🔑 Generate 30 Days", callback_data="gen_30")]
-    ]
-
-    await update.message.reply_text(
-        "👑 Admin Panel",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
 
 async def activate_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -132,7 +118,6 @@ app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("genkey", genkey))
-app.add_handler(CommandHandler("admin", admin))
 app.add_handler(CallbackQueryHandler(button))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, activate_key))
 
