@@ -43,10 +43,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Username: @{username}"
         )
 
-...
+
 
 async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    ...
+    
     await update.message.reply_text(
         f"✅ New Key\n\n"
         f"🔑 Key: `{key}`\n"
