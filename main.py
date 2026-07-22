@@ -8,7 +8,7 @@ from telegram.ext import (
     filters,
 )
 from keys import generate_key
-from database import save_key, get_key, mark_used reset_key
+from database import save_key, get_key, mark_used, reset_key
 
 TOKEN = "8873787131:AAHsJc_rvxPmwwQmcRuZVtrpw3z_JV63sJQ"
 ADMIN_ID = 8226572649
@@ -135,10 +135,11 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 app = ApplicationBuilder().token(TOKEN).build()
-app.add_handler(CommandHandler("reset", reset))
+
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("genkey", genkey))
 app.add_handler(CallbackQueryHandler(button))
+app.add_handler(CommandHandler("reset", reset))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, activate_key))
 
 print("Bot Started...")
