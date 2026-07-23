@@ -15,7 +15,7 @@ from database import save_key, get_key, mark_used, reset_key, save_ip, get_ip
 TOKEN = "8873787131:AAHsJc_rvxPmwwQmcRuZVtrpw3z_JV63sJQ"
 ADMIN_ID = 8226572649
 
-API_URL = "https://wrongxsensi-bot-production.up.railway.app/ip"
+API_URL = "https://wrongxsensi-bot-production.up.railway.app/activate"
 
 waiting_for_key = set()
 
@@ -146,12 +146,36 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✅ Key reset successfully."
     )
 
+async def bind(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only")
+        return
+
+    if len(context.args) != 2:
+        await update.message.reply_text(
+            "Usage:\n/bind KEY IP"
+        )
+        return
+
+    key = context.args[0]
+    ip = context.args[1]
+
+    save_ip(key, ip)
+
+    await update.message.reply_text(
+        f"✅ IP Locked\n\n"
+        f"🔑 Key: {key}\n"
+        f"🌐 IP: {ip}"
+    )
+
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("genkey", genkey))
 app.add_handler(CallbackQueryHandler(button))
 app.add_handler(CommandHandler("reset", reset))
+app.add_handler(CommandHandler("bind", bind))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, activate_key))
 
 print("Bot Started...")
