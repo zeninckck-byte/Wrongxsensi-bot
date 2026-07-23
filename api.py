@@ -1,20 +1,7 @@
 from flask import Flask, request, jsonify
 import os
-import sqlite3
 
 app = Flask(__name__)
-
-def save_ip(key, ip):
-    conn = sqlite3.connect("bot.db")
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "UPDATE keys SET ip=? WHERE key=?",
-        (ip, key)
-    )
-
-    conn.commit()
-    conn.close()
 
 
 @app.route("/")
@@ -34,6 +21,12 @@ def activate():
 
     data = request.json
 
+    if not data:
+        return jsonify({
+            "status": "error",
+            "message": "No data"
+        })
+
     key = data.get("key")
 
     if not key:
@@ -43,8 +36,6 @@ def activate():
         })
 
     user_ip = request.remote_addr
-
-    save_ip(key, user_ip)
 
     return jsonify({
         "status": "success",
