@@ -102,13 +102,27 @@ async def activate_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ This key has already been used.")
         return
 
-    mark_used(key)
+   mark_used(key)
 
-    await update.message.reply_text(
-        f"✅ Key Activated Successfully!\n\n"
-        f"📅 Expires: {data[1]}\n"
-        f"🌐 IP Lock: Ready"
+try:
+    response = requests.post(
+        "https://wrongxsensi-bot-production.up.railway.app/activate",
+        json={"key": key}
     )
+
+    ip_data = response.json()
+    user_ip = ip_data.get("ip", "Unknown")
+
+    save_ip(key, user_ip)
+
+except Exception:
+    user_ip = "Not connected"
+
+await update.message.reply_text(
+    f"✅ Key Activated Successfully!\n\n"
+    f"📅 Expires: {data[1]}\n"
+    f"🌐 IP Lock: {user_ip}"
+)
 
 
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
