@@ -7,7 +7,8 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS keys (
     key TEXT PRIMARY KEY,
     expiry TEXT,
-    used INTEGER DEFAULT 0
+    used INTEGER DEFAULT 0,
+    ip TEXT
 )
 """)
 
