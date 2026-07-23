@@ -25,7 +25,7 @@ def save_key(key, expiry):
 
 def get_key(key):
     cursor.execute(
-        "SELECT key, expiry, used FROM keys WHERE key=?",
+        "SELECT key, expiry, used, ip FROM keys WHERE key=?",
         (key,)
     )
     return cursor.fetchone()
@@ -41,7 +41,7 @@ def mark_used(key):
 
 def reset_key(key):
     cursor.execute(
-        "UPDATE keys SET used=0 WHERE key=?",
+        "UPDATE keys SET used=0, ip=NULL WHERE key=?",
         (key,)
     )
     conn.commit()
