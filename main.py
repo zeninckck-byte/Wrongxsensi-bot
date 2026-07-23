@@ -83,11 +83,9 @@ async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-
 async def activate_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.effective_user.id not in waiting_for_key:
-
         return
 
     waiting_for_key.remove(update.effective_user.id)
@@ -97,24 +95,21 @@ async def activate_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = get_key(key)
 
     if data is None:
-
         await update.message.reply_text("❌ Invalid key.")
-
         return
 
     if data[2] == 1:
-
         await update.message.reply_text("❌ This key has already been used.")
-
         return
 
-mark_used(key)
+    mark_used(key)
 
-await update.message.reply_text(
-    f"✅ Key Activated Successfully!\n\n"
-    f"📅 Expires: {data[1]}\n"
-    f"🌐 IP Lock: Ready"
-)
+    await update.message.reply_text(
+        f"✅ Key Activated Successfully!\n\n"
+        f"📅 Expires: {data[1]}\n"
+        f"🌐 IP Lock: Ready"
+    )
+
 
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
