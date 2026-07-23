@@ -108,15 +108,13 @@ async def activate_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return
 
-    mark_used(key)
+mark_used(key)
 
-    await update.message.reply_text(
-
-        f"✅ Key Activated Successfully!\n\n"
-
-        f"📅 Expires: {data[1]}"
-
-    )
+await update.message.reply_text(
+    f"✅ Key Activated Successfully!\n\n"
+    f"📅 Expires: {data[1]}\n"
+    f"🌐 IP Lock: Ready"
+)
 
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
