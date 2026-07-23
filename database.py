@@ -45,3 +45,21 @@ def reset_key(key):
         (key,)
     )
     conn.commit()
+
+def save_ip(key, ip):
+    cursor.execute(
+        "UPDATE keys SET ip=? WHERE key=?",
+        (ip, key)
+    )
+    conn.commit()
+
+
+def get_ip(key):
+    cursor.execute(
+        "SELECT ip FROM keys WHERE key=?",
+        (key,)
+    )
+    row = cursor.fetchone()
+    if row:
+        return row[0]
+    return None
