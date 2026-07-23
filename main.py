@@ -1,3 +1,5 @@
+import requests
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -12,6 +14,8 @@ from database import save_key, get_key, mark_used, reset_key, save_ip, get_ip
 
 TOKEN = "8873787131:AAHsJc_rvxPmwwQmcRuZVtrpw3z_JV63sJQ"
 ADMIN_ID = 8226572649
+
+API_URL = "https://wrongxsensi-bot-production.up.railway.app/ip"
 
 waiting_for_key = set()
 
