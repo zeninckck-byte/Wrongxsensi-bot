@@ -15,8 +15,8 @@ from database import save_key, get_key, mark_used, reset_key, save_ip, get_ip
 TOKEN = "8873787131:AAHsJc_rvxPmwwQmcRuZVtrpw3z_JV63sJQ"
 ADMIN_ID = 8226572649
 
-# Updated to your custom IP endpoint
-API_URL = "http://89.126.230.12:8081/activate"
+# Updated to use HTTPS and port 8081
+API_URL = "https://89.126.230.12:8081/activate"
 
 waiting_for_key = set()
 
@@ -106,11 +106,12 @@ async def activate_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mark_used(key)
 
     try:
-        # Now uses the API_URL variable pointing to your IP server
+        # Uses the secure HTTPS endpoint
         response = requests.post(
             API_URL,
             json={"key": key},
-            timeout=10
+            timeout=10,
+            verify=False  # Added to bypass self-signed certificate warnings if testing
         )
 
         ip_data = response.json()
