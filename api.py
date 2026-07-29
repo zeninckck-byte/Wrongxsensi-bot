@@ -3,6 +3,13 @@ import os
 
 app = Flask(__name__)
 
+def get_client_ip():
+    # Railway passes the real user IP through X-Forwarded-For
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # The first IP in the comma-separated list is the original client
+        return forwarded_for.split(",")[0].strip()
+    return request.remote_addr
 
 @app.route("/")
 def home():
@@ -12,7 +19,7 @@ def home():
 @app.route("/ip")
 def get_ip():
     return {
-        "ip": request.remote_addr
+        "ip": get_client_ip()
     }
 
 
@@ -35,7 +42,7 @@ def activate():
             "message": "No key"
         })
 
-    user_ip = request.remote_addr
+    user_ip = get_client_ip()
 
     return jsonify({
         "status": "success",
