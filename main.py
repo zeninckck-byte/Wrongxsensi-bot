@@ -16,7 +16,7 @@ TOKEN = "8873787131:AAHsJc_rvxPmwwQmcRuZVtrpw3z_JV63sJQ"
 ADMIN_ID = 8226572649
 
 # Updated to your custom IP endpoint
-API_URL = "http://89.126.230.12:8181/activate"
+API_URL = "http://89.126.230.12:8081/activate"
 
 waiting_for_key = set()
 
