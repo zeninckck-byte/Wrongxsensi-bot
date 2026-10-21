@@ -12,8 +12,8 @@ from telegram.ext import (
 from keys import generate_key
 from database import save_key, get_key, mark_used, reset_key, save_ip, get_ip
 
-TOKEN = "8873787131:AAHsJc_rvxPmwwQmcRuZVtrpw3z_JV63sJQ"
-ADMIN_ID = 8226572649
+TOKEN ="8873787131:AAEEwZmPCHkuSHY8SZyTu17kyo71pC260VI"
+ADMIN_ID = 8873787131
 
 # Updated to use HTTPS and port 8081
 API_URL = "https://89.126.230.12:8081/activate"
