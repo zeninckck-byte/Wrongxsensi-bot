@@ -3,471 +3,371 @@ import sqlite3
 import logging
 import asyncio
 import threading
+import secrets
 from datetime import datetime, timedelta, timezone
-from http.server import BaseHTTPRequestHandler, HTTPServer
 
-import requests
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-)
+from flask import Flask, request, render_template_string, jsonify
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    Application,
-    CommandHandler,
-    CallbackQueryHandler,
-    MessageHandler,
-    ContextTypes,
-    filters,
+Application,
+CommandHandler,
+CallbackQueryHandler,
+MessageHandler,
+ContextTypes,
+filters,
 )
 
-# ==========================================
-# WRONGxSENSI TELEGRAM BOT
-# ==========================================
+==========================================
+
+CONFIGURATION
+
+==========================================
 
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
+format=”%(asctime)s - %(name)s - %(levelname)s - %(message)s”,
+level=logging.INFO,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(name)
 
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
-ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
-API_URL = os.getenv("API_URL", "").strip()
+TOKEN = os.getenv(“TELEGRAM_BOT_TOKEN”, “”).strip()
+ADMIN_ID = int(os.getenv(“ADMIN_ID”, “0”))
+BOT_USERNAME = os.getenv(“BOT_USERNAME”, “YOUR_BOT_USERNAME”).lstrip(”@”)
+CHANNEL_URL = os.getenv(“CHANNEL_URL”, “https://t.me/”)
 
-DB_NAME = "bot.db"
+DB_NAME = “bot.db”
 
+web = Flask(name)
 
-# ==========================================
-# HEALTH SERVER FOR REPLIT
-# ==========================================
+==========================================
 
-class HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
-        self.end_headers()
-        self.wfile.write(b"WRONGxSENSI BOT IS RUNNING")
+DATABASE
 
-    def log_message(self, format, *args):
-        pass
-
-
-def start_health_server():
-    port = int(os.getenv("PORT", "5000"))
-    server = HTTPServer(("0.0.0.0", port), HealthHandler)
-    logger.info("Health server running on port %s", port)
-    server.serve_forever()
-
-
-# ==========================================
-# DATABASE
-# ==========================================
+==========================================
 
 def init_db():
-    with sqlite3.connect(DB_NAME) as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS keys (
-                key TEXT PRIMARY KEY,
-                expiry TEXT NOT NULL,
-                used INTEGER DEFAULT 0
-            )
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY,
-                username TEXT,
-                joined_at TEXT
-            )
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS bindings (
-                key TEXT PRIMARY KEY,
-                ip TEXT NOT NULL
-            )
-        """)
-
+with sqlite3.connect(DB_NAME) as conn:
+conn.execute(”””
+CREATE TABLE IF NOT EXISTS keys (
+key TEXT PRIMARY KEY,
+expiry TEXT NOT NULL,
+used INTEGER DEFAULT 0
+)
+“””)
+conn.execute(”””
+CREATE TABLE IF NOT EXISTS users (
+user_id INTEGER PRIMARY KEY,
+username TEXT,
+joined_at TEXT
+)
+“””)
 
 def generate_key(days):
-    import secrets
+key = “WRONG-” + secrets.token_hex(4).upper()
+expiry = (
+datetime.now(timezone.utc) + timedelta(days=days)
+).isoformat()
 
-    key = "WRONG-" + secrets.token_hex(4).upper()
-    expiry = (
-        datetime.now(timezone.utc) + timedelta(days=days)
-    ).isoformat()
-
-    with sqlite3.connect(DB_NAME) as conn:
-        conn.execute(
-            "INSERT INTO keys (key, expiry, used) VALUES (?, ?, 0)",
-            (key, expiry),
-        )
-
-    return key, expiry
-
-
-def get_key(key):
-    with sqlite3.connect(DB_NAME) as conn:
-        return conn.execute(
-            "SELECT key, expiry, used FROM keys WHERE key = ?",
-            (key,),
-        ).fetchone()
-
-
-def delete_key(key):
-    with sqlite3.connect(DB_NAME) as conn:
-        conn.execute("DELETE FROM keys WHERE key = ?", (key,))
-        conn.execute("DELETE FROM bindings WHERE key = ?", (key,))
-
-
-def save_user(user):
-    with sqlite3.connect(DB_NAME) as conn:
-        conn.execute("""
-            INSERT OR REPLACE INTO users (user_id, username, joined_at)
-            VALUES (?, ?, COALESCE(
-                (SELECT joined_at FROM users WHERE user_id = ?), ?
-            ))
-        """, (
-            user.id,
-            user.username or "",
-            user.id,
-            datetime.now(timezone.utc).isoformat(),
-        ))
-
+with sqlite3.connect(DB_NAME) as conn:
+    conn.execute(
+        "INSERT INTO keys (key, expiry, used) VALUES (?, ?, 0)",
+        (key, expiry),
+    )
+return key, expiry
 
 def is_admin(update):
-    user = update.effective_user
-    return user is not None and ADMIN_ID != 0 and user.id == ADMIN_ID
+user = update.effective_user
+return user is not None and ADMIN_ID != 0 and user.id == ADMIN_ID
 
+def save_user(user):
+if user is None:
+return
 
-# ==========================================
-# START COMMAND
-# ==========================================
+with sqlite3.connect(DB_NAME) as conn:
+    conn.execute("""
+        INSERT INTO users (user_id, username, joined_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET username=excluded.username
+    """, (
+        user.id,
+        user.username or "",
+        datetime.now(timezone.utc).isoformat(),
+    ))
+
+==========================================
+
+WEBSITE
+
+==========================================
+
+HTML = “””
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090909">
+<title>WRONGxSENSI</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080808;color:#fff;font-family:Arial,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:20px;border-bottom:1px solid #292929}
+.logo{color:#ff3030;font-size:21px;font-weight:900}
+header a{color:#fff;text-decoration:none}
+.hero{text-align:center;padding:75px 20px 55px}
+.badge{display:inline-block;border:1px solid #ff3030;color:#ff5555;padding:9px 14px;border-radius:30px;font-size:11px;letter-spacing:2px}
+h1{font-size:clamp(38px,10vw,68px);font-weight:900;margin:24px 0}
+h1 span{color:#ff3030}
+p{color:#aaa;line-height:1.7}
+.button{display:inline-block;border:0;border-radius:8px;padding:14px 19px;margin:8px 4px;background:#ff3030;color:#fff;text-decoration:none;font-weight:bold;cursor:pointer}
+.secondary{background:#171717;border:1px solid #333}
+section{max-width:800px;margin:auto;padding:25px 20px}
+.card{background:#111;border:1px solid #292929;border-radius:14px;padding:22px;margin:15px 0}
+input{width:100%;padding:15px;background:#080808;color:white;border:1px solid #393939;border-radius:8px;font-size:16px;margin:10px 0}
+#result{overflow-wrap:anywhere}
+footer{text-align:center;padding:30px;border-top:1px solid #292929;color:#888;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">WRONGxSENSI</div>
+<a href="#services">EXPLORE ↓</a>
+</header>
+<div class="hero">
+<div class="badge">FREE FIRE GAMING</div>
+<h1>DOMINATE <span>THE GAME.</span></h1>
+<p>Welcome to WRONGxSENSI — sensitivity settings, gaming content and activation key management.</p>
+<a class="button" href="#activate">🔑 Check Key</a>
+<a class="button secondary" href="https://t.me/{{ bot }}">🤖 Open Telegram Bot</a>
+</div>
+<section id="services">
+<h2>Our Services</h2>
+<div class="card">
+<h3>🔑 Activation Keys</h3>
+<p>Check your key's validity and expiry status.</p>
+<a class="button" href="#activate">Check a Key</a>
+</div>
+<div class="card">
+<h3>👤 Player Profile</h3>
+<p>Open Telegram to access your bot profile.</p>
+<a class="button secondary" href="https://t.me/{{ bot }}">Open Profile</a>
+</div>
+<div class="card">
+<h3>💎 Buy Keys</h3>
+<p>Contact the administrator for prices and availability.</p>
+<a class="button secondary" href="https://t.me/{{ bot }}">Contact Us</a>
+</div>
+</section>
+<section id="activate">
+<h2>🔑 Check Activation Key</h2>
+<div class="card">
+<p>This checks your key's status. It does not activate an external service.</p>
+<form id="keyForm">
+<input id="key" maxlength="50" placeholder="WRONG-XXXXXXXX" required autocomplete="off">
+<button class="button" type="submit">Check Key</button>
+</form>
+<p id="result" role="status"></p>
+</div>
+</section>
+<footer>© 2026 WRONGxSENSI · Gaming Community</footer>
+<script>
+document.getElementById("keyForm").addEventListener("submit",async function(e){
+e.preventDefault();
+const result=document.getElementById("result");
+result.textContent="Checking...";
+try{
+const response=await fetch("/api/check-key",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({key:document.getElementById("key").value})
+});
+const data=await response.json();
+result.textContent=data.message||"Unable to check key.";
+}catch(err){result.textContent="Connection error. Please try again."}
+});
+</script>
+</body>
+</html>
+"""
+
+@web.route(”/”)
+def home():
+return render_template_string(HTML, bot=BOT_USERNAME)
+
+@web.route(”/health”)
+def health():
+return “WRONGxSENSI ONLINE”, 200
+
+@web.route(”/api/check-key”, methods=[“POST”])
+def check_key():
+data = request.get_json(silent=True) or {}
+key = data.get(“key”, “”)
+
+if not isinstance(key, str) or not key.strip():
+    return jsonify(message="Please enter a key."), 400
+key = key.strip().upper()
+try:
+    with sqlite3.connect(DB_NAME, timeout=5) as conn:
+        row = conn.execute(
+            "SELECT expiry, used FROM keys WHERE key = ?", (key,)
+        ).fetchone()
+except sqlite3.Error:
+    web.logger.exception("Database error")
+    return jsonify(message="Temporarily unavailable."), 503
+if not row:
+    return jsonify(message="❌ Invalid key.")
+expiry_text, used = row
+try:
+    expiry = datetime.fromisoformat(expiry_text)
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+except ValueError:
+    return jsonify(message="Invalid expiry information."), 500
+if datetime.now(timezone.utc) >= expiry:
+    return jsonify(message="⌛ Key expired.")
+if used:
+    return jsonify(message="⚠️ Key already used.")
+return jsonify(message="✅ Key is valid and unused. Activate through Telegram.")
+
+==========================================
+
+TELEGRAM COMMANDS
+
+==========================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    save_user(user)
+user = update.effective_user
+save_user(user)
 
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "🔑 Activate Key",
-                callback_data="activate",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "👤 Profile",
-                callback_data="profile",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📢 Join Channel",
-                url="https://t.me/",
-            )
-        ],
-    ]
-
-    await update.message.reply_text(
-        "🔥 Welcome to WRONGxSENSI BOT 🔥\n\n"
-        "Choose an option:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-    )
-
-
-# ==========================================
-# BUTTON HANDLER
-# ==========================================
+keyboard = [
+    [InlineKeyboardButton("🔑 Activate Key", callback_data="activate")],
+    [InlineKeyboardButton("👤 Profile", callback_data="profile")],
+    [InlineKeyboardButton("🌐 Website", url=os.getenv("WEBSITE_URL", "https://replit.com"))],
+    [InlineKeyboardButton("📢 Join Channel", url=CHANNEL_URL)],
+]
+await update.effective_message.reply_text(
+    "🔥 Welcome to WRONGxSENSI BOT 🔥\n\nChoose an option:",
+    reply_markup=InlineKeyboardMarkup(keyboard),
+)
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+query = update.callback_query
+await query.answer()
 
-    if query.data == "activate":
-        context.user_data["waiting_for_key"] = True
-
-        await query.message.reply_text(
-            "🔑 Send your activation key.\n\n"
-            "Example: WRONG-ABC12345"
-        )
-
-    elif query.data == "profile":
-        user = query.from_user
-
-        await query.message.reply_text(
-            "👤 YOUR PROFILE\n\n"
-            f"🆔 User ID: {user.id}\n"
-            f"👤 Username: @{user.username or 'Not set'}"
-        )
-
-
-# ==========================================
-# ACTIVATION HANDLER
-# ==========================================
-
-async def activate_key(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    if not context.user_data.get("waiting_for_key"):
-        return
-
-    key = update.message.text.strip().upper()
-    context.user_data["waiting_for_key"] = False
-
-    record = get_key(key)
-
-    if not record:
-        await update.message.reply_text(
-            "❌ Invalid key. Please check and try again."
-        )
-        return
-
-    _, expiry_text, used = record
-
-    try:
-        expiry = datetime.fromisoformat(expiry_text)
-        if expiry.tzinfo is None:
-            expiry = expiry.replace(tzinfo=timezone.utc)
-    except ValueError:
-        await update.message.reply_text(
-            "❌ Key expiry information is invalid. Contact the admin."
-        )
-        return
-
-    if datetime.now(timezone.utc) >= expiry:
-        await update.message.reply_text(
-            "⌛ This activation key has expired."
-        )
-        return
-
-    if used:
-        await update.message.reply_text(
-            "⚠️ This key has already been used."
-        )
-        return
-
-    if not API_URL:
-        await update.message.reply_text(
-            "⚠️ Activation service is not configured.\n"
-            "Please contact the administrator."
-        )
-        return
-
-    await update.message.reply_text(
-        "⏳ Checking your key with the activation service..."
+if query.data == "activate":
+    context.user_data["waiting_for_key"] = True
+    await query.message.reply_text(
+        "🔑 Send your activation key.\nExample: WRONG-ABC12345"
+    )
+elif query.data == "profile":
+    user = query.from_user
+    await query.message.reply_text(
+        f"👤 YOUR PROFILE\n\n🆔 User ID: {user.id}\n"
+        f"👤 Username: @{user.username or 'Not set'}"
     )
 
-    try:
-        response = await asyncio.to_thread(
-            requests.post,
-            API_URL,
-            json={
-                "key": key,
-                "user_id": update.effective_user.id,
-            },
-            timeout=15,
-        )
+async def activate_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
+if not context.user_data.get(“waiting_for_key”):
+return
 
-        if 200 <= response.status_code < 300:
-            with sqlite3.connect(DB_NAME) as conn:
-                conn.execute(
-                    "UPDATE keys SET used = 1 WHERE key = ? AND used = 0",
-                    (key,),
-                )
-
-            await update.message.reply_text(
-                "✅ Activation request accepted by the service."
-            )
-        else:
-            logger.warning(
-                "Activation service returned HTTP %s",
-                response.status_code,
-            )
-            await update.message.reply_text(
-                "❌ The activation service rejected the request.\n"
-                "Please contact the administrator."
-            )
-
-    except requests.RequestException:
-        logger.exception("Activation service connection failed")
-
-        await update.message.reply_text(
-            "❌ Could not connect to the activation service.\n"
-            "Please try again later."
-        )
-
-
-# ==========================================
-# GENERATE KEY — ADMIN ONLY
-# Usage: /genkey 1
-#        /genkey 7
-#        /genkey 30
-# ==========================================
+context.user_data["waiting_for_key"] = False
+key = update.effective_message.text.strip().upper()
+with sqlite3.connect(DB_NAME) as conn:
+    row = conn.execute(
+        "SELECT expiry, used FROM keys WHERE key = ?", (key,)
+    ).fetchone()
+if not row:
+    await update.effective_message.reply_text("❌ Invalid key.")
+    return
+expiry_text, used = row
+try:
+    expiry = datetime.fromisoformat(expiry_text)
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+except ValueError:
+    await update.effective_message.reply_text("❌ Invalid expiry information.")
+    return
+if datetime.now(timezone.utc) >= expiry:
+    await update.effective_message.reply_text("⌛ This key has expired.")
+    return
+if used:
+    await update.effective_message.reply_text("⚠️ This key has already been used.")
+    return
+await update.effective_message.reply_text(
+    "✅ Key is valid and unused. External activation is not configured."
+)
 
 async def genkey(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update):
-        await update.message.reply_text("⛔ Admin only.")
-        return
+if not is_admin(update):
+await update.effective_message.reply_text(“⛔ Admin only.”)
+return
 
-    if not context.args:
-        await update.message.reply_text(
-            "Usage:\n"
-            "/genkey 1\n"
-            "/genkey 7\n"
-            "/genkey 30"
-        )
-        return
-
-    try:
-        days = int(context.args[0])
-    except ValueError:
-        await update.message.reply_text(
-            "❌ Enter a valid number of days."
-        )
-        return
-
-    if days < 1 or days > 365:
-        await update.message.reply_text(
-            "❌ Days must be between 1 and 365."
-        )
-        return
-
+if not context.args:
+    await update.effective_message.reply_text("Usage: /genkey 1, /genkey 7, /genkey 30")
+    return
+try:
+    days = int(context.args[0])
+    if not 1 <= days <= 365:
+        raise ValueError
     key, expiry = generate_key(days)
-
-    await update.message.reply_text(
-        "✅ KEY GENERATED\n\n"
-        f"🔑 Key: `{key}`\n"
-        f"📅 Valid for: {days} day(s)\n"
-        f"⌛ Expires: {expiry}",
-        parse_mode="Markdown",
-    )
-
-
-# ==========================================
-# RESET KEY — ADMIN ONLY
-# Usage: /reset WRONG-ABC12345
-# ==========================================
+except (ValueError, sqlite3.IntegrityError):
+    await update.effective_message.reply_text("❌ Enter days from 1 to 365.")
+    return
+await update.effective_message.reply_text(
+    f"✅ KEY GENERATED\n\n🔑 Key: {key}\n📅 Valid for: {days} day(s)\n⌛ Expires: {expiry}"
+)
 
 async def reset_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update):
-        await update.message.reply_text("⛔ Admin only.")
-        return
+if not is_admin(update):
+await update.effective_message.reply_text(“⛔ Admin only.”)
+return
 
-    if not context.args:
-        await update.message.reply_text(
-            "Usage: /reset WRONG-ABC12345"
-        )
-        return
+if not context.args:
+    await update.effective_message.reply_text("Usage: /reset WRONG-ABC12345")
+    return
+with sqlite3.connect(DB_NAME) as conn:
+    cur = conn.execute("UPDATE keys SET used=0 WHERE key=?", (context.args[0].upper(),))
+await update.effective_message.reply_text(
+    "✅ Key reset." if cur.rowcount else "❌ Key not found."
+)
 
-    key = context.args[0].upper()
+==========================================
 
-    with sqlite3.connect(DB_NAME) as conn:
-        result = conn.execute(
-            "UPDATE keys SET used = 0 WHERE key = ?",
-            (key,),
-        )
+START BOTH SERVICES
 
-    if result.rowcount:
-        await update.message.reply_text(
-            "✅ Key reset successfully."
-        )
-    else:
-        await update.message.reply_text(
-            "❌ Key not found."
-        )
+==========================================
 
+def run_web():
+port = int(os.getenv(“PORT”, “5000”))
+web.run(host=“0.0.0.0”, port=port, use_reloader=False, threaded=True)
 
-# ==========================================
-# BIND KEY TO IP — ADMIN ONLY
-# Usage: /bind WRONG-ABC12345 1.2.3.4
-# ==========================================
+async def run_bot():
+application = Application.builder().token(TOKEN).build()
+application.add_handler(CommandHandler(“start”, start))
+application.add_handler(CommandHandler(“genkey”, genkey))
+application.add_handler(CommandHandler(“reset”, reset_key))
+application.add_handler(CallbackQueryHandler(button))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, activate_key))
 
-async def bind_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update):
-        await update.message.reply_text("⛔ Admin only.")
-        return
-
-    if len(context.args) != 2:
-        await update.message.reply_text(
-            "Usage: /bind WRONG-ABC12345 IP_ADDRESS"
-        )
-        return
-
-    key = context.args[0].upper()
-    ip = context.args[1]
-
-    if not get_key(key):
-        await update.message.reply_text(
-            "❌ Key not found."
-        )
-        return
-
-    with sqlite3.connect(DB_NAME) as conn:
-        conn.execute(
-            "INSERT OR REPLACE INTO bindings (key, ip) VALUES (?, ?)",
-            (key, ip),
-        )
-
-    await update.message.reply_text(
-        f"✅ Key bound to IP: {ip}"
-    )
-
-
-# ==========================================
-# ERROR HANDLER
-# ==========================================
-
-async def error_handler(
-    update: object,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    logger.error(
-        "Telegram handler error",
-        exc_info=context.error,
-    )
-
-
-# ==========================================
-# MAIN
-# ==========================================
+await application.initialize()
+await application.start()
+await application.updater.start_polling(drop_pending_updates=True)
+logger.info("WRONGxSENSI Telegram bot started")
+try:
+    await asyncio.Event().wait()
+finally:
+    await application.updater.stop()
+    await application.stop()
+    await application.shutdown()
 
 def main():
-    if not TOKEN:
-        raise RuntimeError(
-            "Missing TELEGRAM_BOT_TOKEN. Add it in Replit Secrets."
-        )
+if not TOKEN:
+raise RuntimeError(“Missing TELEGRAM_BOT_TOKEN. Add it in Replit Secrets.”)
 
-    init_db()
+init_db()
+threading.Thread(target=run_web, daemon=True).start()
+asyncio.run(run_bot())
 
-    threading.Thread(
-        target=start_health_server,
-        daemon=True,
-    ).start()
-
-    app = Application.builder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("genkey", genkey))
-    app.add_handler(CommandHandler("reset", reset_key))
-    app.add_handler(CommandHandler("bind", bind_key))
-
-    app.add_handler(CallbackQueryHandler(button))
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            activate_key,
-        )
-    )
-
-    app.add_error_handler(error_handler)
-
-    logger.info("WRONGxSENSI BOT starting...")
-    app.run_polling(drop_pending_updates=True)
-
-
-if __name__ == "__main__":
-    main()
+if name == “main”:
+main()
