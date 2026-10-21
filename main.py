@@ -32,9 +32,9 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-TOKEN = os.getenv("8873787131:AAEEwZmPCHkuSHY8SZyTu17kyo71pC260VI", "").strip()
-ADMIN_ID = int(os.getenv("8873787131", "0"))
-API_URL ="https://89.126.230.12:8081/activate", "").strip()
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+API_URL = os.getenv("API_URL", "").strip()
 
 DB_NAME = "bot.db"
 
